@@ -98,6 +98,16 @@ int correction_value(const Worker& w, const Position& pos, const Stack* const ss
               * ((*(ss - 2)->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()]
                  + (*(ss - 4)->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()])
             + 6307 * (*(ss - 6)->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()]
+            + ((ss - 3)->currentMove.is_ok()
+                   ? 4096
+                     * (*(ss - 3)
+                           ->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()]
+                   : 0)
+            + ((ss - 5)->currentMove.is_ok()
+                   ? 2048
+                     * (*(ss - 5)
+                           ->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()]
+                   : 0)
           : 80695;
 
     return 13806 * pcv + 9512 * micv + 11615 * (wnpcv + bnpcv) + cntcv;
@@ -131,6 +141,11 @@ void update_correction_history(const Position& pos,
         (*(ss - 2)->continuationCorrectionHistory)[pc][to] << bonus * 130 / 128;
         (*(ss - 4)->continuationCorrectionHistory)[pc][to] << bonus * 70 / 128;
         (*(ss - 6)->continuationCorrectionHistory)[pc][to] << bonus * 35 / 128;
+        // Learn residuals for successive moves by the same side as well as replies.
+        if ((ss - 3)->currentMove.is_ok())
+            (*(ss - 3)->continuationCorrectionHistory)[pc][to] << bonus * 96 / 128;
+        if ((ss - 5)->currentMove.is_ok())
+            (*(ss - 5)->continuationCorrectionHistory)[pc][to] << bonus * 48 / 128;
     }
 }
 
@@ -664,7 +679,9 @@ void Search::Worker::do_move(Position&    pos,
         const Square to = move.to_sq();
 
         prefetch(&(*(ss - 1)->continuationCorrectionHistory)[pc][to]);
+        prefetch(&(*(ss - 2)->continuationCorrectionHistory)[pc][to]);
         prefetch(&(*(ss - 3)->continuationCorrectionHistory)[pc][to]);
+        prefetch(&(*(ss - 4)->continuationCorrectionHistory)[pc][to]);
         prefetch(&(*(ss - 5)->continuationCorrectionHistory)[pc][to]);
     }
 
